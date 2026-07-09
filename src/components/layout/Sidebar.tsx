@@ -2,19 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const navItems = [
-  { href: "/", label: "Dashboard", icon: "◈" },
-  { href: "/patients", label: "Patients", icon: "◎" },
-  { href: "/trials", label: "Trials", icon: "⬡" },
-  { href: "/matches", label: "Matches", icon: "⇄" },
-];
+import { NavLink, isNavActive, navItems } from "@/components/layout/MobileNav";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const coordinatorItems = navItems.filter((item) => item.href !== "/control");
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-slate-800 bg-[#0a101c] text-slate-100">
+    <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-800 bg-[#0a101c] text-slate-100 lg:flex">
       <div className="border-b border-slate-800 px-5 py-6">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-lg font-bold text-white">
@@ -28,26 +23,15 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {navItems.map((item) => {
-          const active =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                active
-                  ? "bg-blue-600/20 text-blue-300"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              <span className="text-base opacity-80">{item.icon}</span>
-              {item.label}
-            </Link>
-          );
-        })}
+        {coordinatorItems.map((item) => (
+          <NavLink
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            active={isNavActive(pathname, item.href)}
+          />
+        ))}
       </nav>
 
       <div className="border-t border-slate-800 px-3 py-4">

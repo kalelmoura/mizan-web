@@ -51,7 +51,7 @@ export function DataTable<T>({
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#1e2d4a] bg-[#0f1729]">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e2d4a] px-4 py-3">
+      <div className="flex flex-col gap-3 border-b border-[#1e2d4a] px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
         <input
           type="search"
           value={query}
@@ -60,19 +60,18 @@ export function DataTable<T>({
             setPage(1);
           }}
           placeholder={searchPlaceholder}
-          readOnly={false}
-          className="w-full max-w-xs rounded-lg border border-[#243552] bg-[#0b1220] px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none"
+          className="w-full rounded-lg border border-[#243552] bg-[#0b1220] px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none sm:max-w-xs"
         />
         <button
           type="button"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+          className="hidden rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white sm:block"
         >
           Search
         </button>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
+        <table className="min-w-[720px] w-full text-sm">
           <thead>
             <tr className="border-b border-[#1e2d4a] bg-[#0b1220] text-left text-xs uppercase tracking-wide text-slate-500">
               {columns.map((col) => (

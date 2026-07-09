@@ -258,7 +258,7 @@ export function ControlPanel({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <KpiCard
           label="Total shortfall"
           value={String(kpis.totalShortfall)}
@@ -285,26 +285,26 @@ export function ControlPanel({
         />
       </div>
 
-      <nav className="flex flex-wrap gap-2 border-b border-[#1e2d4a] pb-1">
+      <nav className="-mx-1 flex gap-2 overflow-x-auto border-b border-[#1e2d4a] pb-1 scrollbar-none">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium transition ${
+            className={`flex shrink-0 items-center gap-1.5 rounded-t-lg px-3 py-2.5 text-xs font-medium transition sm:gap-2 sm:px-4 sm:text-sm ${
               activeTab === tab.id
-                ? "bg-[#111a2e] text-white border border-b-0 border-[#1e2d4a]"
+                ? "border border-b-0 border-[#1e2d4a] bg-[#111a2e] text-white"
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
             <span>{tab.icon}</span>
-            {tab.label}
+            <span className="whitespace-nowrap">{tab.label}</span>
           </button>
         ))}
       </nav>
 
-      <div className="rounded-xl border border-[#1e2d4a] bg-[#0f1729] p-4">
-        <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="rounded-xl border border-[#1e2d4a] bg-[#0f1729] p-3 sm:p-4">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <div>
             <h2 className="text-base font-semibold text-white">
               {tabs.find((t) => t.id === activeTab)?.label} — full detail
@@ -379,7 +379,7 @@ function KpiCard({
           : "text-white";
 
   return (
-    <div className="rounded-xl border border-[#1e2d4a] bg-[#111a2e] p-5">
+    <div className="rounded-xl border border-[#1e2d4a] bg-[#111a2e] p-4 sm:p-5">
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
         {label}
       </p>
