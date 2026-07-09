@@ -11,7 +11,7 @@ export default async function TrialsPage() {
       <div>
         <h2 className="text-xl font-semibold text-slate-900">Trials</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Clinical trials in the matching pool (`GET /api/trials`).
+          Clinical trials in the matching pool.
         </p>
       </div>
 

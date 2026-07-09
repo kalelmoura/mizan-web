@@ -11,7 +11,7 @@ export default async function PatientsPage() {
       <div>
         <h2 className="text-xl font-semibold text-slate-900">Patients</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Patients in the matching pool (`GET /api/patients`).
+          Patients in the matching pool.
         </p>
       </div>
 

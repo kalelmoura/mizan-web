@@ -9,7 +9,7 @@ export default async function MatchesPage() {
       <div>
         <h2 className="text-xl font-semibold text-slate-900">Matches</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Patient–trial match results from `GET /api/matches`.
+          Patient–trial match results from the matching pipeline.
         </p>
       </div>
       <MatchTable matches={matches} />
