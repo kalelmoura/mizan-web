@@ -1,12 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MatchTable } from "@/components/matches/MatchTable";
+import { PatientTrialEligibility } from "@/components/patients/PatientTrialEligibility";
+import { FactMatchBar } from "@/components/patients/FactMatchBar";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { api } from "@/lib/api";
+import { buildPatientTrialEligibility } from "@/lib/eligibility";
 import { patientLabel } from "@/lib/utils";
 
 interface PatientDetailPageProps {
   params: Promise<{ id: string }>;
+}
+
+function factDisplayValue(
+  fact: { num_value: number | string | null; str_value: string; unit: string }
+): string {
+  if (fact.num_value !== "" && fact.num_value !== null) {
+    const unit = fact.unit || fact.str_value;
+    return unit ? `${fact.num_value} ${unit}`.trim() : String(fact.num_value);
+  }
+  return fact.str_value || "—";
 }
 
 export default async function PatientDetailPage({
@@ -22,13 +34,20 @@ export default async function PatientDetailPage({
 
   const { patient, facts } = detail;
 
+  const trialEligibility = await Promise.all(
+    matches.map(async (match) => {
+      const audit = await api.getAuditTrail(match.patient_id, match.trial_id);
+      return buildPatientTrialEligibility(patient, facts, match, audit);
+    })
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link
             href="/patients"
-            className="text-sm text-teal-700 hover:underline"
+            className="text-sm text-blue-700 hover:underline"
           >
             ← Patients
           </Link>
@@ -45,64 +64,40 @@ export default async function PatientDetailPage({
         />
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Clinical facts
-        </h3>
-        {facts.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">
-            No structured facts available for this patient in mock data.
+      {matches.length > 0 ? (
+        <PatientTrialEligibility trials={trialEligibility} />
+      ) : (
+        <section className="rounded-xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center">
+          <p className="text-sm text-slate-600">
+            No trial connections for this patient.
           </p>
-        ) : (
-          <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium text-slate-600">
-                    Field
-                  </th>
-                  <th className="px-4 py-2 text-left font-medium text-slate-600">
-                    Value
-                  </th>
-                  <th className="px-4 py-2 text-left font-medium text-slate-600">
-                    Source
-                  </th>
-                  <th className="px-4 py-2 text-left font-medium text-slate-600">
-                    Confidence
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {facts.map((fact) => (
-                  <tr key={fact.fact_id}>
-                    <td className="px-4 py-2 font-medium text-slate-800">
-                      {fact.field_name}
-                    </td>
-                    <td className="px-4 py-2 text-slate-700">
-                      {fact.num_value !== "" && fact.num_value !== null
-                        ? String(fact.num_value)
-                        : fact.str_value}
-                      {fact.unit ? ` ${fact.unit}` : ""}
-                      {fact.negated ? " (negated)" : ""}
-                    </td>
-                    <td className="px-4 py-2 text-slate-500">{fact.source}</td>
-                    <td className="px-4 py-2 text-slate-500">
-                      {fact.confidence}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      <section>
-        <h3 className="mb-4 text-lg font-semibold text-slate-900">
-          Trial matches ({matches.length})
-        </h3>
-        <MatchTable matches={matches} showPatient={false} showTrial />
-      </section>
+      {matches.length === 0 && facts.length > 0 && (
+        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Clinical facts
+          </h3>
+          <p className="mt-1 text-xs text-slate-500">
+            No trial matches yet — facts are not linked to eligibility criteria.
+          </p>
+          <div className="mt-4 space-y-3">
+            {facts.map((fact) => (
+              <FactMatchBar
+                key={fact.fact_id}
+                label={fact.field_name}
+                fieldName={fact.field_name}
+                value={factDisplayValue(fact)}
+                source={fact.source}
+                confidence={fact.confidence}
+                matchScore={0}
+                overallResult="UNKNOWN"
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
