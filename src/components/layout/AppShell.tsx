@@ -9,18 +9,20 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="coordinator-shell flex min-h-screen bg-slate-100">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-slate-200 bg-white px-8 py-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-teal-600">
-            Clinical trial coordination
+        <header className="border-b border-slate-200 bg-white px-6 py-4 lg:px-8">
+          <p className="text-xs font-medium uppercase tracking-wider text-blue-600">
+            Coordinator platform
           </p>
           <h1 className="text-lg font-semibold text-slate-900">
-            Patient–trial matching with full audit trail
+            Patient–trial matching with eligibility audit
           </h1>
         </header>
-        <main className="flex-1 overflow-auto px-8 py-6">{children}</main>
+        <main className="flex-1 overflow-auto px-6 py-6 lg:px-8">
+          {children}
+        </main>
       </div>
     </div>
   );

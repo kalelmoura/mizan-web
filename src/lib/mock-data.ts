@@ -117,6 +117,10 @@ export const mockApi = {
     return auditTrails[auditKey(patientId, trialId)] ?? [];
   },
 
+  getAllAuditRecords(): AuditRecord[] {
+    return Object.values(auditTrails).flat();
+  },
+
   getCoordinatorDashboard(): CoordinatorDashboardRow[] {
     return coordinatorDashboard as CoordinatorDashboardRow[];
   },

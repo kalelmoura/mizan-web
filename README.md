@@ -38,6 +38,7 @@ cp .env.example .env.local
 | `/trials/[id]` | `GET /api/trials/{trial_id}`, `GET /api/matches?trial_id=` |
 | `/matches` | `GET /api/matches` |
 | `/matches/[patientId]/[trialId]` | `GET /api/matches/{patient_id}/{trial_id}`, `GET /api/matches/{patient_id}/{trial_id}/audit` |
+| `/control` | **Behind-the-scenes control panel** — read-only tabs: At-Risk Trials, Patient Eligibility, Audit Trail, Summaries |
 
 ## API contract
 
