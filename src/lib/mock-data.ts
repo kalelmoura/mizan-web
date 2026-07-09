@@ -1,5 +1,7 @@
 import patients from "../../public/mocks/patients.json";
 import patientP001 from "../../public/mocks/patient-P001.json";
+import patientP006 from "../../public/mocks/patient-P006.json";
+import patientP008 from "../../public/mocks/patient-P008.json";
 import trials from "../../public/mocks/trials.json";
 import trialNCT001 from "../../public/mocks/trial-NCT001.json";
 import matches from "../../public/mocks/matches.json";
@@ -24,6 +26,8 @@ import type {
 
 const patientDetails: Record<string, PatientDetail> = {
   P001: patientP001 as PatientDetail,
+  P006: patientP006 as PatientDetail,
+  P008: patientP008 as PatientDetail,
 };
 
 const trialDetails: Record<string, TrialDetail> = {

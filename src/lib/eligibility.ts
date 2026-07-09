@@ -4,6 +4,7 @@ import type {
   Patient,
   PatientFact,
   PatientTrialMatch,
+  Trial,
 } from "@/lib/types";
 
 export interface FactCriterionLink {
@@ -32,6 +33,13 @@ export interface PatientTrialEligibilityData {
   facts: FactEligibilityItem[];
   summary: string;
   highlights: string[];
+}
+
+export interface UnmatchedPatientData {
+  facts: FactEligibilityItem[];
+  summary: string;
+  highlights: string[];
+  trialsScreened: number;
 }
 
 const fieldLabels: Record<string, string> = {
@@ -229,4 +237,210 @@ export function buildPatientTrialEligibility(
   );
 
   return { match, facts: factItems, summary, highlights };
+}
+
+function factDisplay(fact: PatientFact): string {
+  return factDisplayValue(fact);
+}
+
+function blockingCriterion(
+  trial: Trial,
+  criterionText: string,
+  reason: string
+): FactCriterionLink {
+  return {
+    criterion_id: `${trial.trial_id}-block`,
+    criterion_text: `${trial.trial_id}: ${criterionText}`,
+    result: "NOT_MET",
+    reason,
+    rule_type: "inclusion",
+    hard_gate: true,
+  };
+}
+
+export function buildUnmatchedPatientData(
+  patient: Patient,
+  facts: PatientFact[],
+  trials: Trial[]
+): UnmatchedPatientData {
+  const recruiting = trials.filter((t) => t.status === "recruiting");
+  const diagnosis =
+    facts.find((f) => f.field_name === "diagnosis")?.str_value?.toLowerCase() ??
+    "";
+  const ecogFact = facts.find((f) => f.field_name === "ecog");
+  const ecog =
+    ecogFact?.num_value !== "" && ecogFact?.num_value != null
+      ? Number(ecogFact.num_value)
+      : null;
+  const egfrFact = facts.find((f) => f.field_name === "biomarker_egfr");
+  const hemoglobinFact = facts.find((f) => f.field_name === "lab_hemoglobin");
+
+  const factItems: FactEligibilityItem[] = [];
+
+  const ageBlocks: FactCriterionLink[] = [];
+  if (patient.age > 75) {
+    for (const trial of recruiting.filter(
+      (t) => t.therapeutic_area === "lung cancer"
+    )) {
+      ageBlocks.push(
+        blockingCriterion(
+          trial,
+          "Age 75 or younger",
+          `Age ${patient.age} exceeds the maximum age for ${trial.title}`
+        )
+      );
+    }
+  }
+
+  factItems.push({
+    id: "demographic-age",
+    field_name: "age",
+    label: fieldLabels.age,
+    value: `${patient.age} years`,
+    source: "demographics",
+    confidence: "high",
+    criteria: ageBlocks,
+    overallResult: ageBlocks.length ? "NOT_MET" : "UNKNOWN",
+    matchScore: ageBlocks.length ? 0 : 45,
+  });
+
+  factItems.push({
+    id: "demographic-sex",
+    field_name: "sex",
+    label: "Sex",
+    value: patient.sex,
+    source: "demographics",
+    confidence: "high",
+    criteria: [],
+    overallResult: "UNKNOWN",
+    matchScore: 0,
+  });
+
+  factItems.push({
+    id: "demographic-location",
+    field_name: "location",
+    label: "Location",
+    value: `${patient.city}, ${patient.country}`,
+    source: "demographics",
+    confidence: "high",
+    criteria: [],
+    overallResult: "UNKNOWN",
+    matchScore: 0,
+  });
+
+  for (const fact of facts) {
+    const blocks: FactCriterionLink[] = [];
+
+    if (fact.field_name === "diagnosis") {
+      for (const trial of recruiting) {
+        const area = trial.therapeutic_area.toLowerCase();
+        const matchesArea =
+          (area.includes("lung") && diagnosis.includes("nsclc")) ||
+          (area.includes("lung") && diagnosis.includes("lung")) ||
+          (area.includes("breast") && diagnosis.includes("breast"));
+
+        if (!matchesArea) {
+          blocks.push(
+            blockingCriterion(
+              trial,
+              `Indication: ${trial.therapeutic_area}`,
+              `Diagnosis '${fact.str_value}' does not match ${trial.therapeutic_area} trials`
+            )
+          );
+        }
+      }
+    }
+
+    if (fact.field_name === "ecog" && ecog !== null && ecog > 2) {
+      for (const trial of recruiting.filter(
+        (t) => t.therapeutic_area === "lung cancer"
+      )) {
+        blocks.push(
+          blockingCriterion(
+            trial,
+            "ECOG performance status 0-2",
+            `ECOG ${ecog} exceeds the performance status limit for ${trial.title}`
+          )
+        );
+      }
+    }
+
+    if (fact.field_name === "biomarker_egfr" && egfrFact?.negated) {
+      for (const trial of recruiting.filter((t) =>
+        t.title.toLowerCase().includes("egfr")
+      )) {
+        blocks.push(
+          blockingCriterion(
+            trial,
+            "Documented EGFR activating mutation required",
+            "No EGFR mutation detected — required for EGFR-targeted trials"
+          )
+        );
+      }
+    }
+
+    if (fact.field_name === "lab_hemoglobin" && hemoglobinFact) {
+      const hb = Number(hemoglobinFact.num_value);
+      if (hb < 10) {
+        for (const trial of recruiting) {
+          blocks.push(
+            blockingCriterion(
+              trial,
+              "Hemoglobin at least 10 g/dL",
+              `Hemoglobin ${hb} g/dL is below the protocol minimum for ${trial.title}`
+            )
+          );
+        }
+      }
+    }
+
+    const overall: CriterionResult =
+      blocks.length > 0 ? "NOT_MET" : "UNKNOWN";
+
+    factItems.push({
+      id: fact.fact_id,
+      field_name: fact.field_name,
+      label: fieldLabels[fact.field_name] ?? fact.field_name,
+      value: factDisplay(fact),
+      source: fact.source,
+      confidence: fact.confidence,
+      criteria: blocks,
+      overallResult: overall,
+      matchScore: blocks.length > 0 ? 0 : 45,
+    });
+  }
+
+  const blockingFacts = factItems.filter((f) => f.overallResult === "NOT_MET");
+  const primaryBlock =
+    blockingFacts.find((f) => f.field_name === "diagnosis") ??
+    blockingFacts[0];
+
+  const highlights: string[] = [];
+  if (primaryBlock?.criteria[0]) {
+    highlights.push(primaryBlock.criteria[0].reason);
+  }
+  for (const fact of blockingFacts.slice(0, 3)) {
+    for (const c of fact.criteria.slice(0, 1)) {
+      if (!highlights.includes(c.reason)) highlights.push(c.reason);
+    }
+  }
+  highlights.push(
+    `Screened against ${recruiting.length} recruiting trials — no eligible tier assigned`
+  );
+
+  let summary = `${patient.patient_id} was not matched to any active trial. `;
+  if (primaryBlock) {
+    summary += `The primary barrier is ${primaryBlock.label.toLowerCase()}: ${primaryBlock.value}. `;
+  }
+  if (patient.age > 75) {
+    summary += `Age ${patient.age} exceeds limits on several oncology protocols. `;
+  }
+  summary += `After screening across ${recruiting.length} recruiting studies, no patient–trial pair met the minimum eligibility tier.`;
+
+  return {
+    facts: factItems,
+    summary,
+    highlights,
+    trialsScreened: recruiting.length,
+  };
 }

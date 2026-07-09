@@ -1,33 +1,27 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PatientTrialEligibility } from "@/components/patients/PatientTrialEligibility";
-import { FactMatchBar } from "@/components/patients/FactMatchBar";
+import { PatientUnmatchedPanel } from "@/components/patients/PatientUnmatchedPanel";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { api } from "@/lib/api";
-import { buildPatientTrialEligibility } from "@/lib/eligibility";
+import {
+  buildPatientTrialEligibility,
+  buildUnmatchedPatientData,
+} from "@/lib/eligibility";
 import { patientLabel } from "@/lib/utils";
 
 interface PatientDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-function factDisplayValue(
-  fact: { num_value: number | string | null; str_value: string; unit: string }
-): string {
-  if (fact.num_value !== "" && fact.num_value !== null) {
-    const unit = fact.unit || fact.str_value;
-    return unit ? `${fact.num_value} ${unit}`.trim() : String(fact.num_value);
-  }
-  return fact.str_value || "—";
-}
-
 export default async function PatientDetailPage({
   params,
 }: PatientDetailPageProps) {
   const { id } = await params;
-  const [detail, matches] = await Promise.all([
+  const [detail, matches, trials] = await Promise.all([
     api.getPatient(id),
     api.getMatches({ patient_id: id }),
+    api.getTrials(),
   ]);
 
   if (!detail) notFound();
@@ -40,6 +34,11 @@ export default async function PatientDetailPage({
       return buildPatientTrialEligibility(patient, facts, match, audit);
     })
   );
+
+  const unmatchedData =
+    matches.length === 0
+      ? buildUnmatchedPatientData(patient, facts, trials)
+      : null;
 
   return (
     <div className="space-y-8">
@@ -64,40 +63,11 @@ export default async function PatientDetailPage({
         />
       </div>
 
-      {matches.length > 0 ? (
+      {matches.length > 0 && trialEligibility.length > 0 ? (
         <PatientTrialEligibility trials={trialEligibility} />
-      ) : (
-        <section className="rounded-xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center">
-          <p className="text-sm text-slate-600">
-            No trial connections for this patient.
-          </p>
-        </section>
-      )}
-
-      {matches.length === 0 && facts.length > 0 && (
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Clinical facts
-          </h3>
-          <p className="mt-1 text-xs text-slate-500">
-            No trial matches yet — facts are not linked to eligibility criteria.
-          </p>
-          <div className="mt-4 space-y-3">
-            {facts.map((fact) => (
-              <FactMatchBar
-                key={fact.fact_id}
-                label={fact.field_name}
-                fieldName={fact.field_name}
-                value={factDisplayValue(fact)}
-                source={fact.source}
-                confidence={fact.confidence}
-                matchScore={0}
-                overallResult="UNKNOWN"
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      ) : unmatchedData ? (
+        <PatientUnmatchedPanel data={unmatchedData} />
+      ) : null}
     </div>
   );
 }
