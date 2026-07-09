@@ -1,18 +1,21 @@
 import { mockApi } from "@/lib/mock-data";
 import type {
-  AuditEvent,
-  CriterionEvaluation,
-  DashboardStats,
-  Match,
-  MatchDetail,
-  PaginatedResponse,
+  AtRiskTrial,
+  AuditRecord,
+  CoordinatorDashboardRow,
+  DiagnosisSummaryRow,
+  HealthResponse,
+  MatchTier,
   Patient,
+  PatientDetail,
+  PatientTrialMatch,
   Trial,
+  TrialDetail,
+  TrialSummaryRow,
 } from "@/lib/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-const USE_MOCK =
-  process.env.NEXT_PUBLIC_USE_MOCK_API !== "false";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API !== "false";
 
 async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -32,102 +35,96 @@ async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  async getDashboardStats(): Promise<DashboardStats> {
-    if (USE_MOCK) return mockApi.getDashboardStats();
-    return fetchApi<DashboardStats>("/dashboard/stats");
+  async getHealth(): Promise<HealthResponse> {
+    if (USE_MOCK) return mockApi.getHealth();
+    return fetchApi<HealthResponse>("/api/health");
   },
 
-  async getPatients(params?: {
-    search?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<PaginatedResponse<Patient>> {
-    if (USE_MOCK) return mockApi.getPatients(params);
-    const query = new URLSearchParams();
-    if (params?.search) query.set("search", params.search);
-    if (params?.page) query.set("page", String(params.page));
-    if (params?.limit) query.set("limit", String(params.limit));
-    return fetchApi(`/patients?${query}`);
+  async getPatients(): Promise<Patient[]> {
+    if (USE_MOCK) return mockApi.getPatients();
+    return fetchApi<Patient[]>("/api/patients");
   },
 
-  async getPatient(id: string): Promise<Patient | null> {
-    if (USE_MOCK) return mockApi.getPatient(id);
+  async getPatient(patientId: string): Promise<PatientDetail | null> {
+    if (USE_MOCK) return mockApi.getPatient(patientId);
     try {
-      return await fetchApi<Patient>(`/patients/${id}`);
+      return await fetchApi<PatientDetail>(`/api/patients/${patientId}`);
     } catch {
       return null;
     }
   },
 
-  async getTrials(params?: {
-    search?: string;
-    status?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<PaginatedResponse<Trial>> {
-    if (USE_MOCK) return mockApi.getTrials(params);
-    const query = new URLSearchParams();
-    if (params?.search) query.set("search", params.search);
-    if (params?.status) query.set("status", params.status);
-    if (params?.page) query.set("page", String(params.page));
-    if (params?.limit) query.set("limit", String(params.limit));
-    return fetchApi(`/trials?${query}`);
+  async getTrials(): Promise<Trial[]> {
+    if (USE_MOCK) return mockApi.getTrials();
+    return fetchApi<Trial[]>("/api/trials");
   },
 
-  async getTrial(id: string): Promise<Trial | null> {
-    if (USE_MOCK) return mockApi.getTrial(id);
+  async getTrial(trialId: string): Promise<TrialDetail | null> {
+    if (USE_MOCK) return mockApi.getTrial(trialId);
     try {
-      return await fetchApi<Trial>(`/trials/${id}`);
+      return await fetchApi<TrialDetail>(`/api/trials/${trialId}`);
     } catch {
       return null;
     }
   },
 
   async getMatches(params?: {
-    patientId?: string;
-    trialId?: string;
-    status?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<PaginatedResponse<Match>> {
+    patient_id?: string;
+    trial_id?: string;
+    tier?: MatchTier;
+  }): Promise<PatientTrialMatch[]> {
     if (USE_MOCK) return mockApi.getMatches(params);
     const query = new URLSearchParams();
-    if (params?.patientId) query.set("patientId", params.patientId);
-    if (params?.trialId) query.set("trialId", params.trialId);
-    if (params?.status) query.set("status", params.status);
-    if (params?.page) query.set("page", String(params.page));
-    if (params?.limit) query.set("limit", String(params.limit));
-    return fetchApi(`/matches?${query}`);
+    if (params?.patient_id) query.set("patient_id", params.patient_id);
+    if (params?.trial_id) query.set("trial_id", params.trial_id);
+    if (params?.tier) query.set("tier", params.tier);
+    const qs = query.toString();
+    return fetchApi<PatientTrialMatch[]>(
+      `/api/matches${qs ? `?${qs}` : ""}`
+    );
   },
 
-  async getMatch(id: string): Promise<MatchDetail | null> {
-    if (USE_MOCK) return mockApi.getMatch(id);
+  async getMatch(
+    patientId: string,
+    trialId: string
+  ): Promise<PatientTrialMatch | null> {
+    if (USE_MOCK) return mockApi.getMatch(patientId, trialId);
     try {
-      return await fetchApi<MatchDetail>(`/matches/${id}`);
+      return await fetchApi<PatientTrialMatch>(
+        `/api/matches/${patientId}/${trialId}`
+      );
     } catch {
       return null;
     }
   },
 
-  async getCriteria(matchId: string): Promise<{ data: CriterionEvaluation[] }> {
-    if (USE_MOCK) return mockApi.getCriteria(matchId);
-    return fetchApi(`/matches/${matchId}/criteria`);
+  async getAuditTrail(
+    patientId: string,
+    trialId: string
+  ): Promise<AuditRecord[]> {
+    if (USE_MOCK) return mockApi.getAuditTrail(patientId, trialId);
+    return fetchApi<AuditRecord[]>(
+      `/api/matches/${patientId}/${trialId}/audit`
+    );
   },
 
-  async getMatchAudit(
-    matchId: string,
-    page = 1,
-    limit = 50
-  ): Promise<PaginatedResponse<AuditEvent>> {
-    if (USE_MOCK) return mockApi.getMatchAudit(matchId, page, limit);
-    return fetchApi(`/matches/${matchId}/audit?page=${page}&limit=${limit}`);
+  async getCoordinatorDashboard(): Promise<CoordinatorDashboardRow[]> {
+    if (USE_MOCK) return mockApi.getCoordinatorDashboard();
+    return fetchApi<CoordinatorDashboardRow[]>("/api/dashboard/coordinator");
   },
 
-  async getGlobalAudit(
-    page = 1,
-    limit = 20
-  ): Promise<PaginatedResponse<AuditEvent>> {
-    if (USE_MOCK) return mockApi.getGlobalAudit(page, limit);
-    return fetchApi(`/audit?page=${page}&limit=${limit}`);
+  async getAtRiskTrials(): Promise<AtRiskTrial[]> {
+    if (USE_MOCK) return mockApi.getAtRiskTrials();
+    return fetchApi<AtRiskTrial[]>("/api/dashboard/at-risk-trials");
+  },
+
+  async getTrialSummary(): Promise<TrialSummaryRow[]> {
+    if (USE_MOCK) return mockApi.getTrialSummary();
+    return fetchApi<TrialSummaryRow[]>("/api/dashboard/trial-summary");
+  },
+
+  async getDiagnosisSummary(): Promise<DiagnosisSummaryRow[]> {
+    if (USE_MOCK) return mockApi.getDiagnosisSummary();
+    return fetchApi<DiagnosisSummaryRow[]>("/api/dashboard/diagnosis-summary");
   },
 };

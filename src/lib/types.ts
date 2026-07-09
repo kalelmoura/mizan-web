@@ -1,115 +1,177 @@
-export type CriterionStatus =
-  | "passed"
-  | "failed"
-  | "needs_screening"
-  | "not_evaluated";
+export type MatchTier =
+  | "ELIGIBLE"
+  | "NEEDS_SCREENING"
+  | "REVIEW"
+  | "NOT_ELIGIBLE";
 
-export type CriterionType = "inclusion" | "exclusion";
+export type CriterionResult =
+  | "MET"
+  | "NOT_MET"
+  | "UNKNOWN"
+  | "NOT_APPLICABLE";
 
-export type MatchStatus =
-  | "screening"
-  | "pending_review"
-  | "recommended"
-  | "not_recommended";
+export type RuleType = "inclusion" | "exclusion";
 
-export type MatchRecommendation =
-  | "pending"
-  | "refer_for_screening"
-  | "enroll"
-  | "do_not_enroll";
-
-export type TrialStatus = "recruiting" | "active" | "completed" | "suspended";
-
-export type AuditEntityType = "match" | "criterion" | "recommendation";
-
-export interface CriteriaSummary {
-  passed: number;
-  failed: number;
-  needsScreening: number;
-  notEvaluated: number;
+export interface ApiError {
+  error: {
+    code: string;
+    message: string;
+    details?: string[];
+  };
 }
 
 export interface Patient {
-  id: string;
-  mrn: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;
-  sex: "male" | "female" | "other";
-  conditions: string[];
-  lastScreenedAt?: string;
+  patient_id: string;
+  age: number;
+  sex: string;
+  city: string;
+  country: string;
+}
+
+export interface PatientFact {
+  patient_id: string;
+  fact_id: string;
+  field_name: string;
+  num_value: number | string | null;
+  str_value: string;
+  unit: string;
+  negated: boolean;
+  confidence: string;
+  source: string;
+}
+
+export interface PatientDetail {
+  patient: Patient;
+  facts: PatientFact[];
 }
 
 export interface Trial {
-  id: string;
-  nctId: string;
+  trial_id: string;
   title: string;
   phase: string;
-  status: TrialStatus;
-  condition: string;
   sponsor: string;
-  inclusionCount: number;
-  exclusionCount: number;
+  therapeutic_area: string;
+  status: string;
+  enrollment_count: number;
+  target_enrollment: number;
 }
 
-export interface Match {
-  id: string;
-  patientId: string;
-  trialId: string;
-  status: MatchStatus;
-  recommendation: MatchRecommendation;
-  confidenceScore?: number;
-  criteriaSummary: CriteriaSummary;
-  createdAt: string;
-  updatedAt: string;
-  recommendedBy?: string | null;
+export interface EligibilityCriterion {
+  criterion_id: string;
+  trial_id: string;
+  rule_type: RuleType;
+  sequence_num: string;
+  field_checked: string;
+  operator: string;
+  value: string;
+  unit?: string;
+  time_window?: string;
+  notes?: string;
+  hard_gate: boolean;
+  criterion_text: string;
 }
 
-export interface MatchDetail extends Match {
-  patient: { id: string; mrn: string; displayName: string };
-  trial: { id: string; nctId: string; title: string };
+export interface Site {
+  site_id: string;
+  trial_id: string;
+  site_name: string;
+  city: string;
+  country: string;
 }
 
-export interface CriterionEvaluation {
-  id: string;
-  matchId: string;
-  type: CriterionType;
-  ordinal: number;
-  text: string;
-  status: CriterionStatus;
-  evidence?: string | null;
-  evaluatedAt?: string | null;
-  evaluatedBy?: string | null;
-  notes?: string | null;
+export interface TrialDetail {
+  trial: Trial;
+  criteria: EligibilityCriterion[];
+  sites: Site[];
 }
 
-export interface AuditEvent {
-  id: string;
-  matchId: string;
-  actor: string;
-  action: string;
-  entityType: AuditEntityType;
-  entityId: string;
-  previousValue?: string | null;
-  newValue?: string | null;
-  notes?: string | null;
-  timestamp: string;
+export interface PatientTrialMatch {
+  patient_id: string;
+  trial_id: string;
+  trial_title: string;
+  tier: MatchTier;
+  score: number;
+  soft_rules_met: number;
+  soft_rules_total: number;
+  soft_rules_unknown: number;
+  location_bonus: number;
+  hard_failures: number;
+  hard_unknowns: number;
+  soft_failures: number;
 }
 
-export interface PaginatedMeta {
-  page: number;
-  limit: number;
-  total: number;
+export interface AuditRecord {
+  patient_id: string;
+  trial_id: string;
+  criterion_id: string;
+  field_checked: string;
+  rule_type: RuleType;
+  hard_gate: boolean;
+  result: CriterionResult;
+  reason: string;
+  patient_info: string;
+  criterion_text: string;
 }
 
-export interface PaginatedResponse<T> {
-  data: T[];
-  meta: PaginatedMeta;
+export interface CoordinatorDashboardRow {
+  trial_id: string;
+  title: string;
+  therapeutic_area: string;
+  phase: string;
+  sponsor: string;
+  enrollment_count: number;
+  target_enrollment: number;
+  shortfall: number;
+  fill_pct: number;
+  eligible_count: number;
+  needs_screening_count: number;
+  review_count: number;
 }
 
-export interface DashboardStats {
-  patientCount: number;
-  activeTrialCount: number;
-  pendingMatchCount: number;
-  needsScreeningCount: number;
+export interface AtRiskTrial {
+  trial_id: string;
+  title: string;
+  therapeutic_area: string;
+  phase: string;
+  sponsor: string;
+  enrollment_count: number;
+  target_enrollment: number;
+  shortfall: number;
+  fill_pct: number;
+}
+
+export interface TrialSummaryRow {
+  trial_id: string;
+  trial_title: string;
+  eligible_count: number;
+  needs_screening_count: number;
+  review_count: number;
+  not_eligible_count: number;
+}
+
+export interface DiagnosisSummaryRow {
+  diagnosis: string;
+  eligible_patient_count: number;
+}
+
+export interface HealthResponse {
+  status: string;
+}
+
+export interface ImportResponse {
+  status: string;
+  message: string;
+  inputs: Record<string, number>;
+  output_row_counts: Record<string, number>;
+}
+
+export interface MatchRunResponse {
+  status: string;
+  run_id: string;
+  duration_ms: number;
+  output_row_counts: Record<string, number>;
+}
+
+export function matchPath(patientId: string, trialId: string): string {
+  return `/matches/${patientId}/${trialId}`;
 }

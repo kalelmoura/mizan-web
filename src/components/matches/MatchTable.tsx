@@ -1,17 +1,12 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import type { Match } from "@/lib/types";
-import { getMatchDetail } from "@/lib/mock-data";
-import {
-  confidenceColor,
-  formatRelativeTime,
-  matchStatusColor,
-  matchStatusLabel,
-  recommendationLabel,
-} from "@/lib/utils";
+import type { PatientTrialMatch } from "@/lib/types";
+import { matchPath } from "@/lib/types";
+import { getPatientById } from "@/lib/mock-data";
+import { patientLabel, scoreColor, tierColor, tierLabel } from "@/lib/utils";
 
 interface MatchTableProps {
-  matches: Match[];
+  matches: PatientTrialMatch[];
   showPatient?: boolean;
   showTrial?: boolean;
 }
@@ -45,79 +40,85 @@ export function MatchTable({
               </th>
             )}
             <th className="px-4 py-3 text-left font-medium text-slate-600">
-              Status
+              Tier
             </th>
             <th className="px-4 py-3 text-left font-medium text-slate-600">
-              Criteria
+              Rules
             </th>
             <th className="px-4 py-3 text-left font-medium text-slate-600">
-              Confidence
-            </th>
-            <th className="px-4 py-3 text-left font-medium text-slate-600">
-              Updated
+              Score
             </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
           {matches.map((match) => {
-            const detail = getMatchDetail(match.id);
-            const summary = match.criteriaSummary;
+            const patient = getPatientById(match.patient_id);
             return (
-              <tr key={match.id} className="hover:bg-slate-50">
+              <tr key={`${match.patient_id}-${match.trial_id}`} className="hover:bg-slate-50">
                 {showPatient && (
                   <td className="px-4 py-3">
                     <Link
-                      href={`/matches/${match.id}`}
+                      href={matchPath(match.patient_id, match.trial_id)}
                       className="font-medium text-teal-700 hover:underline"
                     >
-                      {detail?.patient.displayName ?? match.patientId}
+                      {match.patient_id}
                     </Link>
-                    {detail && (
-                      <p className="text-xs text-slate-500">{detail.patient.mrn}</p>
+                    {patient && (
+                      <p className="text-xs text-slate-500">
+                        {patientLabel(
+                          patient.patient_id,
+                          patient.age,
+                          patient.sex
+                        )}
+                      </p>
                     )}
                   </td>
                 )}
                 {showTrial && (
                   <td className="px-4 py-3">
                     <p className="line-clamp-1 font-medium text-slate-800">
-                      {detail?.trial.title ?? match.trialId}
+                      {match.trial_title}
                     </p>
-                    {detail && (
-                      <p className="text-xs text-slate-500">{detail.trial.nctId}</p>
-                    )}
+                    <p className="text-xs text-slate-500">{match.trial_id}</p>
                   </td>
                 )}
                 <td className="px-4 py-3">
-                  <div className="flex flex-col gap-1">
-                    <StatusBadge
-                      label={matchStatusLabel[match.status]}
-                      className={matchStatusColor[match.status]}
-                    />
-                    <span className="text-xs text-slate-500">
-                      {recommendationLabel[match.recommendation]}
-                    </span>
-                  </div>
+                  <StatusBadge
+                    label={tierLabel[match.tier]}
+                    className={tierColor[match.tier]}
+                  />
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1.5 text-xs">
-                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700">
-                      {summary.passed} pass
-                    </span>
-                    <span className="rounded bg-rose-100 px-1.5 py-0.5 text-rose-700">
-                      {summary.failed} fail
-                    </span>
-                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">
-                      {summary.needsScreening} screen
+                    {match.hard_failures > 0 && (
+                      <span className="rounded bg-rose-100 px-1.5 py-0.5 text-rose-700">
+                        {match.hard_failures} hard fail
+                      </span>
+                    )}
+                    {match.hard_unknowns > 0 && (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">
+                        {match.hard_unknowns} hard unknown
+                      </span>
+                    )}
+                    {match.soft_rules_unknown > 0 && (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">
+                        {match.soft_rules_unknown} soft unknown
+                      </span>
+                    )}
+                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">
+                      {match.soft_rules_met}/{match.soft_rules_total} soft met
                     </span>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`font-semibold ${confidenceColor(match.confidenceScore)}`}>
-                    {match.confidenceScore ?? "—"}%
+                  <span className={`font-semibold ${scoreColor(match.score)}`}>
+                    {match.score}
                   </span>
-                </td>
-                <td className="px-4 py-3 text-slate-500">
-                  {formatRelativeTime(match.updatedAt)}
+                  {match.location_bonus > 0 && (
+                    <p className="text-xs text-slate-400">
+                      +{match.location_bonus} location
+                    </p>
+                  )}
                 </td>
               </tr>
             );

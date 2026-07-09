@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { MatchTable } from "@/components/matches/MatchTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { api } from "@/lib/api";
-import { formatDate, patientAge } from "@/lib/utils";
+import { patientLabel } from "@/lib/utils";
 
 interface PatientDetailPageProps {
   params: Promise<{ id: string }>;
@@ -13,12 +13,14 @@ export default async function PatientDetailPage({
   params,
 }: PatientDetailPageProps) {
   const { id } = await params;
-  const [patient, matchesResult] = await Promise.all([
+  const [detail, matches] = await Promise.all([
     api.getPatient(id),
-    api.getMatches({ patientId: id }),
+    api.getMatches({ patient_id: id }),
   ]);
 
-  if (!patient) notFound();
+  if (!detail) notFound();
+
+  const { patient, facts } = detail;
 
   return (
     <div className="space-y-8">
@@ -31,66 +33,75 @@ export default async function PatientDetailPage({
             ← Patients
           </Link>
           <h2 className="mt-2 text-2xl font-semibold text-slate-900">
-            {patient.firstName} {patient.lastName}
+            {patient.patient_id}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">{patient.mrn}</p>
+          <p className="mt-1 text-sm text-slate-500">
+            {patientLabel(patient.patient_id, patient.age, patient.sex)}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <StatusBadge
-            label={`Age ${patientAge(patient.dateOfBirth)}`}
-            className="border-slate-200 bg-slate-100 text-slate-700"
-          />
-          <StatusBadge
-            label={patient.sex}
-            className="border-slate-200 bg-slate-100 text-slate-700 capitalize"
-          />
-        </div>
+        <StatusBadge
+          label={`${patient.city}, ${patient.country}`}
+          className="border-slate-200 bg-slate-100 text-slate-700"
+        />
       </div>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Clinical profile
+          Clinical facts
         </h3>
-        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-xs text-slate-500">Date of birth</dt>
-            <dd className="text-sm font-medium text-slate-900">
-              {formatDate(patient.dateOfBirth)}
-            </dd>
+        {facts.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">
+            No structured facts available for this patient in mock data.
+          </p>
+        ) : (
+          <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium text-slate-600">
+                    Field
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-slate-600">
+                    Value
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-slate-600">
+                    Source
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-slate-600">
+                    Confidence
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {facts.map((fact) => (
+                  <tr key={fact.fact_id}>
+                    <td className="px-4 py-2 font-medium text-slate-800">
+                      {fact.field_name}
+                    </td>
+                    <td className="px-4 py-2 text-slate-700">
+                      {fact.num_value !== "" && fact.num_value !== null
+                        ? String(fact.num_value)
+                        : fact.str_value}
+                      {fact.unit ? ` ${fact.unit}` : ""}
+                      {fact.negated ? " (negated)" : ""}
+                    </td>
+                    <td className="px-4 py-2 text-slate-500">{fact.source}</td>
+                    <td className="px-4 py-2 text-slate-500">
+                      {fact.confidence}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div>
-            <dt className="text-xs text-slate-500">Last screened</dt>
-            <dd className="text-sm font-medium text-slate-900">
-              {patient.lastScreenedAt
-                ? formatDate(patient.lastScreenedAt)
-                : "Never"}
-            </dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-xs text-slate-500">Conditions</dt>
-            <dd className="mt-1 flex flex-wrap gap-2">
-              {patient.conditions.map((c) => (
-                <span
-                  key={c}
-                  className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs text-teal-800"
-                >
-                  {c}
-                </span>
-              ))}
-            </dd>
-          </div>
-        </dl>
+        )}
       </section>
 
       <section>
         <h3 className="mb-4 text-lg font-semibold text-slate-900">
-          Trial matches ({matchesResult.data.length})
+          Trial matches ({matches.length})
         </h3>
-        <MatchTable
-          matches={matchesResult.data}
-          showPatient={false}
-          showTrial
-        />
+        <MatchTable matches={matches} showPatient={false} showTrial />
       </section>
     </div>
   );
