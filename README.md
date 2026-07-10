@@ -1,2 +1,6 @@
-# mizan-web
-Front end for mizan @cursor mobile hackathon 
+# Mizan — AI Infrastructure for Clinical Trials
+
+**Mizan @ Cursor Mobile Hackathon**
+
+- Initial front-end scaffold (`mizan-web/`)
+- Final GitHub repository: https://github.com/mr-mustafa7/Mizan-2
